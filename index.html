@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>时间格式转换工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#64748b',
+            accent: '#10b981',
+            dark: '#1e293b',
+            light: '#f8fafc'
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          boxShadow: {
+            'card': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            'input': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            'input-focus': '0 0 0 3px rgba(59, 130, 246, 0.3)',
+          }
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .input-transition {
+        transition: all 0.2s ease-in-out;
+      }
+      .card-hover {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+      .label-float {
+        transition: all 0.2s ease;
+      }
+      /* 时间选择器自定义样式 */
+      input[type="datetime-local"] {
+        /* 隐藏原生箭头（部分浏览器） */
+        &::-webkit-calendar-picker-indicator {
+          background: transparent;
+          padding: 0;
+          margin: 0;
+          cursor: pointer;
+        }
+        /* Firefox */
+        &::-moz-calendar-picker-indicator {
+          background: transparent;
+          padding: 0;
+          margin: 0;
+          cursor: pointer;
+        }
+      }
+      .datetime-wrapper {
+        position: relative;
+      }
+      .datetime-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: #64748b;
+      }
+    }
+  </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-light to-gray-100 min-h-screen p-4 md:p-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- 标题区域 -->
+    <header class="text-center mb-10">
+      <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-dark mb-2 flex items-center justify-center">
+        <i class="fa fa-clock-o text-primary mr-3"></i>时间格式转换工具
+      </h1>
+      <p class="text-secondary text-lg">在任意输入框输入时间或使用时间选择器，其他格式将自动同步更新</p>
+    </header>
+
+    <!-- 转换卡片容器 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- 时间选择器卡片 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
+        <div class="relative mb-2">
+          <label for="datetimePicker" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-calendar text-primary mr-1"></i>时间选择器
+          </label>
+        </div>
+        <div class="datetime-wrapper">
+          <input 
+            type="datetime-local" 
+            id="datetimePicker" 
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition cursor-pointer"
+          >
+          <i class="fa fa-calendar-o datetime-icon"></i>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">点击选择日期和时间</p>
+      </div>
+
+      <!-- 时间戳输入框 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
+        <div class="relative mb-2">
+          <label for="timestamp" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-hashtag text-primary mr-1"></i>时间戳 (秒/毫秒)
+          </label>
+        </div>
+        <input 
+          type="text" 
+          id="timestamp" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
+          placeholder="例如: 1620000000 或 1620000000000"
+        >
+      </div>
+
+      <!-- ISO 时间输入框 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
+        <div class="relative mb-2">
+          <label for="iso" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-calendar-check-o text-primary mr-1"></i>ISO 格式
+          </label>
+        </div>
+        <input 
+          type="text" 
+          id="iso" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
+          placeholder="例如: 2021-05-03T10:40:00.000Z"
+        >
+      </div>
+
+      <!-- 本地时间输入框 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
+        <div class="relative mb-2">
+          <label for="local" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-map-marker text-primary mr-1"></i>本地时间
+          </label>
+        </div>
+        <input 
+          type="text" 
+          id="local" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
+          placeholder="例如: 2021-05-03 18:40:00"
+        >
+      </div>
+
+      <!-- UTC 时间输入框 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
+        <div class="relative mb-2">
+          <label for="utc" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-globe text-primary mr-1"></i>UTC 时间
+          </label>
+        </div>
+        <input 
+          type="text" 
+          id="utc" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
+          placeholder="例如: 2021-05-03 10:40:00 UTC"
+        >
+      </div>
+
+      <!-- 自定义格式输入框 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
+        <div class="relative mb-2">
+          <label for="custom" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-pencil text-primary mr-1"></i>自定义格式
+          </label>
+        </div>
+        <input 
+          type="text" 
+          id="custom" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
+          placeholder="例如: 2021年05月03日 18时40分00秒"
+        >
+      </div>
+
+      <!-- RFC 格式输入框 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover md:col-span-2">
+        <div class="relative mb-2">
+          <label for="rfc" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-file-text-o text-primary mr-1"></i>RFC 格式
+          </label>
+        </div>
+        <input 
+          type="text" 
+          id="rfc" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
+          placeholder="例如: Mon, 03 May 2021 10:40:00 GMT"
+        >
+      </div>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="mt-8 bg-blue-50 border-l-4 border-primary p-4 rounded-r-lg">
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <i class="fa fa-info-circle text-primary text-xl"></i>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-primary">使用说明</h3>
+          <div class="mt-1 text-sm text-gray-700">
+            <p>1. 可通过时间选择器或任意输入框输入有效的时间值，其他格式将自动同步更新</p>
+            <p>2. 时间戳支持秒级（10位）和毫秒级（13位）两种格式</p>
+            <p>3. 输入无效时间格式时，对应输入框会显示错误提示</p>
+            <p>4. 时间选择器默认显示当前本地时间，选择后所有格式实时同步</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="mt-12 text-center text-gray-500 text-sm">
+      <p>© 2025 时间格式转换工具 | 设计与开发 with <i class="fa fa-heart text-red-500"></i></p>
+    </footer>
+  </div>
+
+  <script>
+    // 获取所有输入框元素（包含时间选择器）
+    const inputs = {
+      datetimePicker: document.getElementById('datetimePicker'),
+      timestamp: document.getElementById('timestamp'),
+      iso: document.getElementById('iso'),
+      local: document.getElementById('local'),
+      utc: document.getElementById('utc'),
+      custom: document.getElementById('custom'),
+      rfc: document.getElementById('rfc')
+    };
+
+    // 防止重复触发的标志
+    let isUpdating = false;
+
+    // 为所有输入框添加输入事件监听
+    Object.keys(inputs).forEach(type => {
+      inputs[type].addEventListener('input', (e) => {
+        if (isUpdating) return;
+        const value = e.target.value.trim();
+        if (value === '') {
+          clearAllInputs();
+          return;
+        }
+        
+        // 尝试解析输入值
+        const date = parseInput(type, value);
+        if (date) {
+          // 解析成功，更新所有输入框
+          updateAllInputs(date);
+          setInputValid(inputs[type]);
+        } else if (type !== 'datetimePicker') {
+          // 时间选择器不会有无效输入，其他输入框解析失败时标记为无效
+          setInputInvalid(inputs[type]);
+        }
+      });
+    });
+
+    // 解析输入值为Date对象
+    function parseInput(type, value) {
+      try {
+        switch(type) {
+          case 'datetimePicker':
+            // 处理时间选择器值（ISO格式的本地时间）
+            const date = new Date(value);
+            return isNaN(date.getTime()) ? null : date;
+            
+          case 'timestamp':
+            // 处理时间戳（支持秒和毫秒）
+            const num = Number(value);
+            if (isNaN(num)) return null;
+            // 10位是秒，13位是毫秒
+            return num.toString().length === 10 ? new Date(num * 1000) : new Date(num);
+            
+          case 'iso':
+            // 处理ISO格式
+            const isoDate = new Date(value);
+            return isNaN(isoDate.getTime()) ? null : isoDate;
+            
+          case 'local':
+            // 处理本地时间格式 (YYYY-MM-DD HH:mm:ss)
+            const localRegex = /(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
+            const localMatch = value.match(localRegex);
+            if (!localMatch) return null;
+            
+            const [, year, month, day, hour, minute, second = '0'] = localMatch;
+            const localDate = new Date(
+              year, month - 1, day, hour, minute, second
+            );
+            return isNaN(localDate.getTime()) ? null : localDate;
+            
+          case 'utc':
+            // 处理UTC时间格式 (YYYY-MM-DD HH:mm:ss UTC)
+            const utcValue = value.replace(/utc/i, '').trim();
+            const utcRegex = /(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
+            const utcMatch = utcValue.match(utcRegex);
+            if (!utcMatch) return null;
+            
+            const [, utcYear, utcMonth, utcDay, utcHour, utcMinute, utcSecond = '0'] = utcMatch;
+            const utcDate = new Date(Date.UTC(
+              utcYear, utcMonth - 1, utcDay, utcHour, utcMinute, utcSecond
+            ));
+            return isNaN(utcDate.getTime()) ? null : utcDate;
+            
+          case 'custom':
+            // 处理自定义格式 (YYYY年MM月DD日 HH时mm分ss秒)
+            const customRegex = /(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2})时(\d{1,2})分(\d{1,2})秒/;
+            const customMatch = value.match(customRegex);
+            if (!customMatch) return null;
+            
+            const [, cy, cm, cd, ch, cmin, cs] = customMatch;
+            const customDate = new Date(cy, cm - 1, cd, ch, cmin, cs);
+            return isNaN(customDate.getTime()) ? null : customDate;
+            
+          case 'rfc':
+            // 处理RFC格式
+            const rfcDate = new Date(value);
+            return isNaN(rfcDate.getTime()) ? null : rfcDate;
+            
+          default:
+            return null;
+        }
+      } catch (e) {
+        console.error('解析时间失败:', e);
+        return null;
+      }
+    }
+
+    // 更新所有输入框的值
+    function updateAllInputs(date) {
+      isUpdating = true;
+      
+      // 时间选择器（需要格式化为YYYY-MM-DDTHH:mm格式）
+      const localDate = new Date(date);
+      const dateTimeValue = localDate.toISOString().slice(0, 16); // 截取到分钟
+      inputs.datetimePicker.value = dateTimeValue;
+      
+      // 时间戳（秒和毫秒）
+      const timestampMs = date.getTime();
+      const timestampSec = Math.floor(timestampMs / 1000);
+      inputs.timestamp.value = timestampMs.toString().length === 13 ? timestampMs : timestampSec;
+      
+      // ISO格式
+      inputs.iso.value = date.toISOString();
+      
+      // 本地时间 (YYYY-MM-DD HH:mm:ss)
+      inputs.local.value = formatLocalDate(date);
+      
+      // UTC时间 (YYYY-MM-DD HH:mm:ss UTC)
+      inputs.utc.value = formatUTCDate(date);
+      
+      // 自定义格式 (YYYY年MM月DD日 HH时mm分ss秒)
+      inputs.custom.value = formatCustomDate(date);
+      
+      // RFC格式
+      inputs.rfc.value = date.toUTCString();
+      
+      isUpdating = false;
+    }
+
+    // 清除所有输入框
+    function clearAllInputs() {
+      isUpdating = true;
+      Object.values(inputs).forEach(input => {
+        input.value = '';
+        setInputDefault(input);
+      });
+      isUpdating = false;
+    }
+
+    // 格式化本地日期
+    function formatLocalDate(date) {
+      const year = date.getFullYear();
+      const month = padZero(date.getMonth() + 1);
+      const day = padZero(date.getDate());
+      const hour = padZero(date.getHours());
+      const minute = padZero(date.getMinutes());
+      const second = padZero(date.getSeconds());
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    }
+
+    // 格式化UTC日期
+    function formatUTCDate(date) {
+      const year = date.getUTCFullYear();
+      const month = padZero(date.getUTCMonth() + 1);
+      const day = padZero(date.getUTCDate());
+      const hour = padZero(date.getUTCHours());
+      const minute = padZero(date.getUTCMinutes());
+      const second = padZero(date.getUTCSeconds());
+      return `${year}-${month}-${day} ${hour}:${minute}:${second} UTC`;
+    }
+
+    // 格式化自定义日期
+    function formatCustomDate(date) {
+      const year = date.getFullYear();
+      const month = padZero(date.getMonth() + 1);
+      const day = padZero(date.getDate());
+      const hour = padZero(date.getHours());
+      const minute = padZero(date.getMinutes());
+      const second = padZero(date.getSeconds());
+      return `${year}年${month}月${day}日 ${hour}时${minute}分${second}秒`;
+    }
+
+    // 补零函数
+    function padZero(num) {
+      return num.toString().padStart(2, '0');
+    }
+
+    // 设置输入框为有效状态
+    function setInputValid(input) {
+      if (input.id === 'datetimePicker') return; // 时间选择器不需要状态指示
+      input.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-200');
+      input.classList.add('border-green-500', 'focus:border-green-500', 'focus:ring-green-200');
+      
+      // 移除可能存在的错误提示
+      const errorEl = input.parentElement.querySelector('.text-red-500');
+      if (errorEl) errorEl.remove();
+    }
+
+    // 设置输入框为无效状态
+    function setInputInvalid(input) {
+      input.classList.remove('border-green-500', 'focus:border-green-500', 'focus:ring-green-200');
+      input.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-200');
+      
+      // 添加错误提示（如果不存在）
+      if (!input.parentElement.querySelector('.text-red-500')) {
+        const errorEl = document.createElement('p');
+        errorEl.className = 'text-red-500 text-xs mt-1';
+        errorEl.innerHTML = '<i class="fa fa-exclamation-circle mr-1"></i>无效的时间格式';
+        input.parentElement.appendChild(errorEl);
+      }
+    }
+
+    // 设置输入框为默认状态
+    function setInputDefault(input) {
+      if (input.id === 'datetimePicker') return; // 时间选择器不需要状态指示
+      input.classList.remove(
+        'border-red-500', 'focus:border-red-500', 'focus:ring-red-200',
+        'border-green-500', 'focus:border-green-500', 'focus:ring-green-200'
+      );
+      input.classList.add('border-gray-300', 'focus:border-primary', 'focus:ring-primary/50');
+      
+      // 移除错误提示
+      const errorEl = input.parentElement.querySelector('.text-red-500');
+      if (errorEl) errorEl.remove();
+    }
+
+    // 页面加载时显示当前时间
+    window.addEventListener('load', () => {
+      const now = new Date();
+      updateAllInputs(now);
+    });
+  </script>
+</body>
+</html>
