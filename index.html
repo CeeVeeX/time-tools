@@ -338,10 +338,15 @@
     function updateAllInputs(date) {
       isUpdating = true;
       
-      // 时间选择器（需要格式化为YYYY-MM-DDTHH:mm格式）
+      // 时间选择器（需要格式化为本地时间 YYYY-MM-DDTHH:mm）
       const localDate = new Date(date);
-      const dateTimeValue = localDate.toISOString().slice(0, 16); // 截取到分钟
-      inputs.datetimePicker.value = dateTimeValue;
+      const year = localDate.getFullYear();
+      const month = padZero(localDate.getMonth() + 1);
+      const day = padZero(localDate.getDate());
+      const hour = padZero(localDate.getHours());
+      const minute = padZero(localDate.getMinutes());
+
+      inputs.datetimePicker.value = `${year}-${month}-${day}T${hour}:${minute}`;
       
       // 时间戳（秒和毫秒）
       const timestampMs = date.getTime();
