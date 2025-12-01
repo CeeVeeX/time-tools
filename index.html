@@ -1,37 +1,41 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>时间格式转换工具</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-  
+
   <!-- Tailwind 配置 -->
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            primary: '#3b82f6',
-            secondary: '#64748b',
-            accent: '#10b981',
-            dark: '#1e293b',
-            light: '#f8fafc'
+            primary: '#60a5fa',
+            secondary: '#93a4b7',
+            accent: '#22d3ee',
+            dark: '#0b1220',
+            light: '#0f172a',
+            surface: '#111827'
           },
           fontFamily: {
             inter: ['Inter', 'system-ui', 'sans-serif'],
           },
           boxShadow: {
-            'card': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-            'input': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-            'input-focus': '0 0 0 3px rgba(59, 130, 246, 0.3)',
+            'card': '0 10px 30px -10px rgba(0, 0, 0, 0.45), 0 10px 20px -15px rgba(0, 0, 0, 0.35)',
+            'input': '0 1px 2px 0 rgba(0, 0, 0, 0.5)',
+            'input-focus': '0 0 0 3px rgba(96, 165, 250, 0.35)',
+            'neon': '0 0 20px rgba(34, 211, 238, 0.35)'
           }
         },
       }
     }
   </script>
-  
+
   <style type="text/tailwindcss">
     @layer utilities {
       .content-auto {
@@ -76,173 +80,312 @@
         top: 50%;
         transform: translateY(-50%);
         pointer-events: none;
-        color: #64748b;
+        color: #93a4b7;
       }
     }
   </style>
 </head>
-<body class="font-inter bg-gradient-to-br from-light to-gray-100 min-h-screen p-4 md:p-8">
-  <div class="max-w-4xl mx-auto">
-    <!-- 标题区域 -->
-    <header class="text-center mb-10">
-      <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-dark mb-2 flex items-center justify-center">
-        <i class="fa fa-clock-o text-primary mr-3"></i>时间格式转换工具
-      </h1>
-      <p class="text-secondary text-lg">在任意输入框输入时间或使用时间选择器，其他格式将自动同步更新</p>
-    </header>
 
-    <!-- 转换卡片容器 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- 时间选择器卡片 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
-        <div class="relative mb-2">
-          <label for="datetimePicker" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-calendar text-primary mr-1"></i>时间选择器
-          </label>
+<body class="font-inter min-h-screen p-3 md:p-6 dark">
+  <div class="fixed inset-0 -z-10">
+    <!-- 暗色渐变背景与放射光斑 -->
+    <div class="absolute inset-0 bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#111827]"></div>
+    <div class="absolute -top-20 -left-20 w-[40rem] h-[40rem] rounded-full blur-3xl opacity-30 bg-primary/20"></div>
+    <div class="absolute bottom-0 right-0 w-[30rem] h-[30rem] rounded-full blur-2xl opacity-20 bg-accent/20"></div>
+  </div>
+  <div class="flex w-full gap-4">
+    <!-- 左侧：记录历史侧边栏 -->
+    <aside class="w-[290px] shrink-0 hidden md:block">
+      <div class="sticky top-6 space-y-4">
+        <!-- 记录历史（迁移过来） -->
+        <div
+          class="rounded-xl shadow-card p-3 bg-surface/80 backdrop-blur border border-white/5 max-h-[70vh] overflow-auto">
+          <div class="flex items-center justify-between">
+            <h3 class="text-[12px] text-gray-300 flex items-center"><i
+                class="fa fa-history text-secondary mr-2"></i>记录历史</h3>
+            <div class="space-x-2">
+              <button id="btnSaveRecord"
+                class="px-2.5 py-1.5 text-[12px] rounded bg-primary/30 hover:bg-primary/40 text-white border border-white/10"><i
+                  class="fa fa-bookmark mr-1"></i>保存</button>
+              <button id="btnClearRecords"
+                class="px-2.5 py-1.5 text-[12px] rounded bg-white/10 hover:bg-white/20 text-gray-100 border border-white/10"><i
+                  class="fa fa-trash mr-1"></i>清空</button>
+            </div>
+          </div>
+          <ul id="recordsList" class="mt-2 space-y-2"></ul>
         </div>
-        <div class="datetime-wrapper">
-          <input 
-            type="datetime-local" 
-            id="datetimePicker" 
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition cursor-pointer"
-          >
-          <i class="fa fa-calendar-o datetime-icon"></i>
+      </div>
+    </aside>
+
+    <!-- 右侧：主内容区域 -->
+    <main class="flex-1">
+      <!-- 标题区域 -->
+      <header class="mb-6">
+        <h1
+          class="text-[clamp(1.6rem,3.2vw,2.2rem)] font-bold text-white mb-1 flex items-center justify-start drop-shadow">
+          <i class="fa fa-clock-o text-primary mr-3"></i>时间格式转换工具
+        </h1>
+        <p class="text-secondary text-[0.95rem]">在任意输入框输入时间或使用时间选择器，其他格式将自动同步更新</p>
+      </header>
+
+      <!-- 转换卡片容器 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- 时间选择器卡片 -->
+        <div class="rounded-xl shadow-card p-4 card-hover bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="datetimePicker" class="block text-xs font-medium text-gray-200 label-float">
+              <i class="fa fa-calendar text-primary mr-1"></i>时间选择器
+            </label>
+          </div>
+          <div class="datetime-wrapper">
+            <input type="datetime-local" id="datetimePicker"
+              class="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-input input-transition cursor-pointer">
+            <i class="fa fa-calendar-o datetime-icon"></i>
+            <button class="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="datetimePicker" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+          <p class="text-[11px] text-gray-400 mt-1">点击选择日期和时间</p>
         </div>
-        <p class="text-xs text-gray-500 mt-1">点击选择日期和时间</p>
+
+        <!-- 时间戳输入框 -->
+        <div class="rounded-xl shadow-card p-4 card-hover bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="timestamp" class="block text-xs font-medium text-gray-200 label-float">
+              <i class="fa fa-hashtag text-primary mr-1"></i>时间戳 (秒/毫秒)
+            </label>
+          </div>
+          <div class="relative">
+            <input type="text" id="timestamp"
+              class="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-input input-transition"
+              placeholder="例如: 1620000000 或 1620000000000">
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="timestamp" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+        </div>
+
+        <!-- ISO 时间输入框 -->
+        <div class="rounded-xl shadow-card p-4 card-hover bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="iso" class="block text-xs font-medium text-gray-200 label-float">
+              <i class="fa fa-calendar-check-o text-primary mr-1"></i>ISO 格式
+            </label>
+          </div>
+          <div class="relative">
+            <input type="text" id="iso"
+              class="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-input input-transition"
+              placeholder="例如: 2021-05-03T10:40:00.000Z">
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="iso" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+        </div>
+
+        <!-- 本地时间输入框 -->
+        <div class="rounded-xl shadow-card p-4 card-hover bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="local" class="block text-xs font-medium text-gray-200 label-float">
+              <i class="fa fa-map-marker text-primary mr-1"></i>本地时间
+            </label>
+          </div>
+          <div class="relative">
+            <input type="text" id="local"
+              class="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-input input-transition"
+              placeholder="例如: 2021-05-03 18:40:00">
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="local" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+        </div>
+
+        <!-- UTC 时间输入框 -->
+        <div class="rounded-xl shadow-card p-4 card-hover bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="utc" class="block text-xs font-medium text-gray-200 label-float">
+              <i class="fa fa-globe text-primary mr-1"></i>UTC 时间
+            </label>
+          </div>
+          <div class="relative">
+            <input type="text" id="utc"
+              class="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-input input-transition"
+              placeholder="例如: 2021-05-03 10:40:00 UTC">
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="utc" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+        </div>
+
+        <!-- 自定义格式输入框 -->
+        <div class="rounded-xl shadow-card p-4 card-hover bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="custom" class="block text-xs font-medium text-gray-200 label-float">
+              <i class="fa fa-pencil text-primary mr-1"></i>自定义格式
+            </label>
+          </div>
+          <div class="relative">
+            <input type="text" id="custom"
+              class="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-input input-transition"
+              placeholder="例如: 2021年05月03日 18时40分00秒">
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="custom" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+        </div>
+
+        <!-- RFC 格式输入框 -->
+        <div
+          class="rounded-xl shadow-card p-4 card-hover  md:col-span-2 lg:col-span-3  bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="rfc" class="block text-xs font-medium text-gray-200 label-float">
+              <i class="fa fa-file-text-o text-primary mr-1"></i>RFC 格式
+            </label>
+          </div>
+          <div class="relative">
+            <input type="text" id="rfc"
+              class="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-input input-transition"
+              placeholder="例如: Mon, 03 May 2021 10:40:00 GMT">
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="rfc" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+        </div>
+
+        <!-- 毫秒转时分秒 -->
+        <div
+          class="rounded-xl shadow-card p-3 card-hover md:col-span-2 lg:col-span-3 bg-surface/80 backdrop-blur border border-white/5">
+          <div class="relative mb-2">
+            <label for="msConvert" class="block text-[11px] font-medium text-gray-200 label-float">
+              <i class="fa fa-clock-o text-primary mr-1"></i>毫秒 → 时 / 分 / 秒
+            </label>
+          </div>
+          <div class="relative">
+            <input type="text" id="msConvert" class="w-full px-2.5 py-2 border border-white/10 bg-white/5 text-gray-100 placeholder:text-gray-400 rounded-lg 
+        focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary 
+        shadow-input input-transition" placeholder="输入毫秒数，例如：123456789">
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              data-copy-target="msConvert" title="复制"><i class="fa fa-copy"></i></button>
+          </div>
+          <p id="msResult" class="text-secondary text-[12px] mt-1"></p>
+        </div>
       </div>
 
-      <!-- 时间戳输入框 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
-        <div class="relative mb-2">
-          <label for="timestamp" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-hashtag text-primary mr-1"></i>时间戳 (秒/毫秒)
-          </label>
+      <!-- 更多格式输出 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+        <div class="rounded-lg shadow-card p-3 bg-surface/80 backdrop-blur border border-white/5">
+          <h3 class="text-[12px] text-gray-300 mb-2 flex items-center"><i class="fa fa-code text-accent mr-2"></i>更多格式
+          </h3>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-[11px] text-gray-400">Unix 秒</label>
+              <div class="relative"><input id="fmtUnixSec" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="fmtUnixSec" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">Unix 毫秒</label>
+              <div class="relative"><input id="fmtUnixMs" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="fmtUnixMs" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">RFC3339</label>
+              <div class="relative"><input id="fmtRfc3339" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="fmtRfc3339" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">ISO（无毫秒）</label>
+              <div class="relative"><input id="fmtIsoNoMs" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="fmtIsoNoMs" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">YYYY/MM/DD HH:mm</label>
+              <div class="relative"><input id="fmtSlash" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="fmtSlash" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">YYYY.MM.DD HH:mm</label>
+              <div class="relative"><input id="fmtDot" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="fmtDot" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+          </div>
         </div>
-        <input 
-          type="text" 
-          id="timestamp" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
-          placeholder="例如: 1620000000 或 1620000000000"
-        >
-      </div>
 
-      <!-- ISO 时间输入框 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
-        <div class="relative mb-2">
-          <label for="iso" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-calendar-check-o text-primary mr-1"></i>ISO 格式
-          </label>
-        </div>
-        <input 
-          type="text" 
-          id="iso" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
-          placeholder="例如: 2021-05-03T10:40:00.000Z"
-        >
-      </div>
-
-      <!-- 本地时间输入框 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
-        <div class="relative mb-2">
-          <label for="local" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-map-marker text-primary mr-1"></i>本地时间
-          </label>
-        </div>
-        <input 
-          type="text" 
-          id="local" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
-          placeholder="例如: 2021-05-03 18:40:00"
-        >
-      </div>
-
-      <!-- UTC 时间输入框 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
-        <div class="relative mb-2">
-          <label for="utc" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-globe text-primary mr-1"></i>UTC 时间
-          </label>
-        </div>
-        <input 
-          type="text" 
-          id="utc" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
-          placeholder="例如: 2021-05-03 10:40:00 UTC"
-        >
-      </div>
-
-      <!-- 自定义格式输入框 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover">
-        <div class="relative mb-2">
-          <label for="custom" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-pencil text-primary mr-1"></i>自定义格式
-          </label>
-        </div>
-        <input 
-          type="text" 
-          id="custom" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
-          placeholder="例如: 2021年05月03日 18时40分00秒"
-        >
-      </div>
-
-      <!-- RFC 格式输入框 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover md:col-span-2">
-        <div class="relative mb-2">
-          <label for="rfc" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-file-text-o text-primary mr-1"></i>RFC 格式
-          </label>
-        </div>
-        <input 
-          type="text" 
-          id="rfc" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-input input-transition"
-          placeholder="例如: Mon, 03 May 2021 10:40:00 GMT"
-        >
-      </div>
-
-      <!-- 毫秒转时分秒 -->
-      <div class="bg-white rounded-xl shadow-card p-5 card-hover md:col-span-2">
-        <div class="relative mb-2">
-          <label for="msConvert" class="block text-sm font-medium text-gray-700 label-float">
-            <i class="fa fa-clock-o text-primary mr-1"></i>毫秒 → 时 / 分 / 秒
-          </label>
-        </div>
-        <input 
-          type="text" 
-          id="msConvert" 
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary 
-                shadow-input input-transition"
-          placeholder="输入毫秒数，例如：123456789"
-        >
-        <p id="msResult" class="text-secondary text-sm mt-2"></p>
-      </div>
-    </div>
-
-    <!-- 提示信息 -->
-    <div class="mt-8 bg-blue-50 border-l-4 border-primary p-4 rounded-r-lg">
-      <div class="flex items-start">
-        <div class="flex-shrink-0">
-          <i class="fa fa-info-circle text-primary text-xl"></i>
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-primary">使用说明</h3>
-          <div class="mt-1 text-sm text-gray-700">
-            <p>1. 可通过时间选择器或任意输入框输入有效的时间值，其他格式将自动同步更新</p>
-            <p>2. 时间戳支持秒级（10位）和毫秒级（13位）两种格式</p>
-            <p>3. 输入无效时间格式时，对应输入框会显示错误提示</p>
-            <p>4. 时间选择器默认显示当前本地时间，选择后所有格式实时同步</p>
+        <!-- 更多信息展示 -->
+        <div
+          class="rounded-lg shadow-card p-3 bg-surface/80 backdrop-blur border border-white/5 md:col-span-1 lg:col-span-2">
+          <h3 class="text-[12px] text-gray-300 mb-2 flex items-center"><i class="fa fa-info text-primary mr-2"></i>更多信息
+          </h3>
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] text-gray-400">星期</label>
+              <div class="relative"><input id="infoWeekday" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoWeekday" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">季度</label>
+              <div class="relative"><input id="infoQuarter" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoQuarter" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">周序号</label>
+              <div class="relative"><input id="infoWeekNo" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoWeekNo" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">年内第几天</label>
+              <div class="relative"><input id="infoDayOfYear" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoDayOfYear" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">时区偏移（分钟）</label>
+              <div class="relative"><input id="infoTzOffsetMin" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoTzOffsetMin" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">GMT 偏移</label>
+              <div class="relative"><input id="infoGmtOffset" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoGmtOffset" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">闰年</label>
+              <div class="relative"><input id="infoLeapYear" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoLeapYear" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400">本地/UTC 差</label>
+              <div class="relative"><input id="infoLocalUtcDelta" readonly
+                  class="w-full pr-8 px-2.5 py-1.5 text-[13px] border border-white/10 bg-white/5 text-gray-100 rounded" /><button
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                  data-copy-target="infoLocalUtcDelta" title="复制"><i class="fa fa-copy"></i></button></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- 页脚 -->
-    <footer class="mt-12 text-center text-gray-500 text-sm">
-      <p>© 2025 时间格式转换工具 | 设计与开发 with <i class="fa fa-heart text-red-500"></i></p>
-    </footer>
+    </main>
   </div>
+
+  <!-- 页脚 -->
+  <footer class="mt-8 text-center text-gray-400 text-[13px]">
+    <p>© 2025 时间格式转换工具 | 设计与开发 with <i class="fa fa-heart text-red-400"></i></p>
+  </footer>
 
   <script>
     // 获取所有输入框元素（包含时间选择器）
@@ -268,7 +411,7 @@
           clearAllInputs();
           return;
         }
-        
+
         // 尝试解析输入值
         const date = parseInput(type, value);
         if (date) {
@@ -285,64 +428,64 @@
     // 解析输入值为Date对象
     function parseInput(type, value) {
       try {
-        switch(type) {
+        switch (type) {
           case 'datetimePicker':
             // 处理时间选择器值（ISO格式的本地时间）
             const date = new Date(value);
             return isNaN(date.getTime()) ? null : date;
-            
+
           case 'timestamp':
             // 处理时间戳（支持秒和毫秒）
             const num = Number(value);
             if (isNaN(num)) return null;
             // 10位是秒，13位是毫秒
             return num.toString().length === 10 ? new Date(num * 1000) : new Date(num);
-            
+
           case 'iso':
             // 处理ISO格式
             const isoDate = new Date(value);
             return isNaN(isoDate.getTime()) ? null : isoDate;
-            
+
           case 'local':
             // 处理本地时间格式 (YYYY-MM-DD HH:mm:ss)
             const localRegex = /(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
             const localMatch = value.match(localRegex);
             if (!localMatch) return null;
-            
+
             const [, year, month, day, hour, minute, second = '0'] = localMatch;
             const localDate = new Date(
               year, month - 1, day, hour, minute, second
             );
             return isNaN(localDate.getTime()) ? null : localDate;
-            
+
           case 'utc':
             // 处理UTC时间格式 (YYYY-MM-DD HH:mm:ss UTC)
             const utcValue = value.replace(/utc/i, '').trim();
             const utcRegex = /(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
             const utcMatch = utcValue.match(utcRegex);
             if (!utcMatch) return null;
-            
+
             const [, utcYear, utcMonth, utcDay, utcHour, utcMinute, utcSecond = '0'] = utcMatch;
             const utcDate = new Date(Date.UTC(
               utcYear, utcMonth - 1, utcDay, utcHour, utcMinute, utcSecond
             ));
             return isNaN(utcDate.getTime()) ? null : utcDate;
-            
+
           case 'custom':
             // 处理自定义格式 (YYYY年MM月DD日 HH时mm分ss秒)
             const customRegex = /(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2})时(\d{1,2})分(\d{1,2})秒/;
             const customMatch = value.match(customRegex);
             if (!customMatch) return null;
-            
+
             const [, cy, cm, cd, ch, cmin, cs] = customMatch;
             const customDate = new Date(cy, cm - 1, cd, ch, cmin, cs);
             return isNaN(customDate.getTime()) ? null : customDate;
-            
+
           case 'rfc':
             // 处理RFC格式
             const rfcDate = new Date(value);
             return isNaN(rfcDate.getTime()) ? null : rfcDate;
-            
+
           default:
             return null;
         }
@@ -355,7 +498,7 @@
     // 更新所有输入框的值
     function updateAllInputs(date) {
       isUpdating = true;
-      
+
       // 时间选择器（需要格式化为本地时间 YYYY-MM-DDTHH:mm）
       const localDate = new Date(date);
       const year = localDate.getFullYear();
@@ -365,27 +508,46 @@
       const minute = padZero(localDate.getMinutes());
 
       inputs.datetimePicker.value = `${year}-${month}-${day}T${hour}:${minute}`;
-      
+
       // 时间戳（秒和毫秒）
       const timestampMs = date.getTime();
       const timestampSec = Math.floor(timestampMs / 1000);
       inputs.timestamp.value = timestampMs.toString().length === 13 ? timestampMs : timestampSec;
-      
+
       // ISO格式
       inputs.iso.value = date.toISOString();
-      
+
       // 本地时间 (YYYY-MM-DD HH:mm:ss)
       inputs.local.value = formatLocalDate(date);
-      
+
       // UTC时间 (YYYY-MM-DD HH:mm:ss UTC)
       inputs.utc.value = formatUTCDate(date);
-      
+
       // 自定义格式 (YYYY年MM月DD日 HH时mm分ss秒)
       inputs.custom.value = formatCustomDate(date);
-      
+
       // RFC格式
       inputs.rfc.value = date.toUTCString();
-      
+
+      // 更多格式
+      setValue('fmtUnixSec', Math.floor(timestampMs / 1000));
+      setValue('fmtUnixMs', timestampMs);
+      setValue('fmtRfc3339', formatRFC3339(date));
+      setValue('fmtIsoNoMs', formatIsoNoMs(date));
+      setValue('fmtSlash', formatPattern(date, '/'));
+      setValue('fmtDot', formatPattern(date, '.'));
+
+      // 更多信息
+      setValue('infoWeekday', weekdayText(date));
+      setValue('infoQuarter', 'Q' + quarterOf(date));
+      setValue('infoWeekNo', weekNumberISO(date));
+      setValue('infoDayOfYear', dayOfYear(date));
+      const tzOffsetMin = -date.getTimezoneOffset();
+      setValue('infoTzOffsetMin', tzOffsetMin);
+      setValue('infoGmtOffset', gmtOffsetText(date));
+      setValue('infoLeapYear', isLeapYear(date.getFullYear()) ? '是' : '否');
+      setValue('infoLocalUtcDelta', localUtcDeltaText(date));
+
       isUpdating = false;
     }
 
@@ -432,6 +594,90 @@
       return `${year}年${month}月${day}日 ${hour}时${minute}分${second}秒`;
     }
 
+    // RFC3339 格式（带时区偏移）
+    function formatRFC3339(date) {
+      const pad = (n) => n.toString().padStart(2, '0');
+      const y = date.getFullYear();
+      const m = pad(date.getMonth() + 1);
+      const d = pad(date.getDate());
+      const hh = pad(date.getHours());
+      const mm = pad(date.getMinutes());
+      const ss = pad(date.getSeconds());
+      const offset = -date.getTimezoneOffset();
+      const sign = offset >= 0 ? '+' : '-';
+      const abs = Math.abs(offset);
+      const oh = pad(Math.floor(abs / 60));
+      const om = pad(abs % 60);
+      return `${y}-${m}-${d}T${hh}:${mm}:${ss}${sign}${oh}:${om}`;
+    }
+
+    // ISO 无毫秒
+    function formatIsoNoMs(date) {
+      return formatRFC3339(date);
+    }
+
+    // 通用模式 YYYY{sep}MM{sep}DD HH:mm
+    function formatPattern(date, sep) {
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${date.getFullYear()}${sep}${pad(date.getMonth() + 1)}${sep}${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    // 设置只读字段的值
+    function setValue(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    }
+
+    // 星期文本（中文）
+    function weekdayText(date) {
+      const names = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      return names[date.getDay()];
+    }
+
+    // 季度
+    function quarterOf(date) {
+      return Math.floor(date.getMonth() / 3) + 1;
+    }
+
+    // ISO 周序号（周一为一周开始）
+    function weekNumberISO(date) {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = d.getUTCDay() || 7; // 周日=7
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+      return weekNo;
+    }
+
+    // 年内第几天
+    function dayOfYear(date) {
+      const start = new Date(date.getFullYear(), 0, 1);
+      const diff = (date - start) / 86400000;
+      return Math.floor(diff) + 1;
+    }
+
+    // 闰年
+    function isLeapYear(year) {
+      return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    }
+
+    // GMT 偏移文本，如 GMT+08:00
+    function gmtOffsetText(date) {
+      const offset = -date.getTimezoneOffset();
+      const sign = offset >= 0 ? '+' : '-';
+      const abs = Math.abs(offset);
+      const h = String(Math.floor(abs / 60)).padStart(2, '0');
+      const m = String(abs % 60).padStart(2, '0');
+      return `GMT${sign}${h}:${m}`;
+    }
+
+    // 本地/UTC 差描述
+    function localUtcDeltaText(date) {
+      const local = formatLocalDate(date);
+      const utc = formatUTCDate(date);
+      return `${local} / ${utc}`;
+    }
+
     // 补零函数
     function padZero(num) {
       return num.toString().padStart(2, '0');
@@ -441,8 +687,8 @@
     function setInputValid(input) {
       if (input.id === 'datetimePicker') return; // 时间选择器不需要状态指示
       input.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-200');
-      input.classList.add('border-green-500', 'focus:border-green-500', 'focus:ring-green-200');
-      
+      input.classList.add('border-emerald-500', 'focus:border-emerald-400', 'focus:ring-emerald-200/30');
+
       // 移除可能存在的错误提示
       const errorEl = input.parentElement.querySelector('.text-red-500');
       if (errorEl) errorEl.remove();
@@ -450,9 +696,9 @@
 
     // 设置输入框为无效状态
     function setInputInvalid(input) {
-      input.classList.remove('border-green-500', 'focus:border-green-500', 'focus:ring-green-200');
-      input.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-200');
-      
+      input.classList.remove('border-emerald-500', 'focus:border-emerald-400', 'focus:ring-emerald-200/30');
+      input.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-300/30');
+
       // 添加错误提示（如果不存在）
       if (!input.parentElement.querySelector('.text-red-500')) {
         const errorEl = document.createElement('p');
@@ -467,10 +713,10 @@
       if (input.id === 'datetimePicker') return; // 时间选择器不需要状态指示
       input.classList.remove(
         'border-red-500', 'focus:border-red-500', 'focus:ring-red-200',
-        'border-green-500', 'focus:border-green-500', 'focus:ring-green-200'
+        'border-emerald-500', 'focus:border-emerald-400', 'focus:ring-emerald-200/30'
       );
-      input.classList.add('border-gray-300', 'focus:border-primary', 'focus:ring-primary/50');
-      
+      input.classList.add('border-white/10', 'focus:border-primary', 'focus:ring-primary/40');
+
       // 移除错误提示
       const errorEl = input.parentElement.querySelector('.text-red-500');
       if (errorEl) errorEl.remove();
@@ -480,8 +726,10 @@
     window.addEventListener('load', () => {
       const now = new Date();
       updateAllInputs(now);
+      initCopyButtons();
+      initHistory();
     });
-    
+
     // 毫秒转换输入框
     const msInput = document.getElementById('msConvert');
     const msResult = document.getElementById('msResult');
@@ -491,11 +739,11 @@
       const value = msInput.value.trim();
       if (value === '' || isNaN(value)) {
         msResult.textContent = '请输入有效的数字（毫秒）';
-        msResult.classList.add("text-red-500");
+        msResult.classList.add("text-red-400");
         return;
       }
 
-      msResult.classList.remove("text-red-500");
+      msResult.classList.remove("text-red-400");
 
       const ms = Number(value);
 
@@ -507,6 +755,171 @@
       msResult.textContent =
         `${hours} 小时 ${minutes} 分钟 ${seconds} 秒 ${milliseconds} 毫秒`;
     });
+
+    // 复制功能
+    function initCopyButtons() {
+      document.querySelectorAll('[data-copy-target]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-copy-target');
+          const el = document.getElementById(id);
+          if (!el) return;
+          const value = el.value || el.textContent || '';
+          navigator.clipboard.writeText(value).then(() => {
+            btn.classList.add('text-accent');
+            setTimeout(() => btn.classList.remove('text-accent'), 800);
+          });
+        });
+      });
+    }
+
+    // 历史记录
+    const STORAGE_KEY = 'time-tools-records';
+    let records = [];
+
+    function initHistory() {
+      // 读取本地存储
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        records = raw ? JSON.parse(raw) : [];
+      } catch {
+        records = [];
+      }
+      renderRecords();
+
+      // 绑定按钮
+      document.getElementById('btnSaveRecord').addEventListener('click', saveCurrentRecord);
+      document.getElementById('btnClearRecords').addEventListener('click', clearRecords);
+    }
+
+    function saveCurrentRecord() {
+      const snapshot = collectSnapshot();
+      // 添加时间戳
+      snapshot._savedAt = new Date().toISOString();
+      records.unshift(snapshot);
+      persistRecords();
+      renderRecords();
+    }
+
+    function collectSnapshot() {
+      const get = (id) => (document.getElementById(id)?.value || '');
+      return {
+        datetimePicker: get('datetimePicker'),
+        timestamp: get('timestamp'),
+        iso: get('iso'),
+        local: get('local'),
+        utc: get('utc'),
+        custom: get('custom'),
+        rfc: get('rfc'),
+        fmtUnixSec: get('fmtUnixSec'),
+        fmtUnixMs: get('fmtUnixMs'),
+        fmtRfc3339: get('fmtRfc3339'),
+        fmtIsoNoMs: get('fmtIsoNoMs'),
+        fmtSlash: get('fmtSlash'),
+        fmtDot: get('fmtDot'),
+        infoWeekday: get('infoWeekday'),
+        infoQuarter: get('infoQuarter'),
+        infoWeekNo: get('infoWeekNo'),
+        infoDayOfYear: get('infoDayOfYear'),
+        infoTzOffsetMin: get('infoTzOffsetMin'),
+        infoGmtOffset: get('infoGmtOffset'),
+        infoLeapYear: get('infoLeapYear'),
+        infoLocalUtcDelta: get('infoLocalUtcDelta'),
+      };
+    }
+
+    function persistRecords() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(0, 100)));
+      } catch { }
+    }
+
+    function clearRecords() {
+      records = [];
+      persistRecords();
+      renderRecords();
+    }
+
+    function renderRecords() {
+      const list = document.getElementById('recordsList');
+      list.innerHTML = '';
+      if (!records.length) {
+        list.innerHTML = '<li class="text-[12px] text-gray-500">暂无记录</li>';
+        return;
+      }
+
+      records.forEach((rec, idx) => {
+        const li = document.createElement('li');
+        li.className = 'group flex flex-col px-2.5 py-2 border border-white/10 rounded bg-white/5 hover:bg-white/10';
+
+        const left = document.createElement('div');
+        left.className = 'text-[12px] text-gray-300 md:flex-1 min-w-0 w-full';
+        left.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-primary truncate">${rec.local}</span>
+          </div>
+        `;
+
+        const right = document.createElement('div');
+        right.className = 'flex items-center gap-2 flex-wrap mt-2 md:mt-0';
+
+        const btnRestore = document.createElement('button');
+        btnRestore.className = 'px-2 py-1 text-[12px] rounded bg-primary/30 hover:bg-primary/40 text-white border border-white/10 whitespace-nowrap';
+        btnRestore.innerHTML = '<i class="fa fa-undo mr-1"></i>恢复';
+        btnRestore.addEventListener('click', () => restoreRecord(rec));
+
+        const btnCopy = document.createElement('button');
+        btnCopy.className = 'px-2 py-1 text-[12px] rounded bg-white/10 hover:bg-white/20 text-gray-100 border border-white/10 whitespace-nowrap';
+        btnCopy.innerHTML = '<i class="fa fa-copy mr-1"></i>复制ISO';
+        btnCopy.addEventListener('click', () => navigator.clipboard.writeText(rec.iso || ''));
+
+        const btnDelete = document.createElement('button');
+        btnDelete.className = 'px-2 py-1 text-[12px] rounded bg-red-500/30 hover:bg-red-500/40 text-white border border-white/10 whitespace-nowrap';
+        btnDelete.innerHTML = '<i class="fa fa-trash"></i>';
+        btnDelete.addEventListener('click', () => {
+          records.splice(idx, 1);
+          persistRecords();
+          renderRecords();
+        });
+
+        right.appendChild(btnRestore);
+        right.appendChild(btnCopy);
+        right.appendChild(btnDelete);
+
+        li.appendChild(left);
+        li.appendChild(right);
+        list.appendChild(li);
+      });
+    }
+
+    function restoreRecord(rec) {
+      // 优先用 ISO 恢复
+      if (rec.iso) {
+        const d = new Date(rec.iso);
+        if (!isNaN(d.getTime())) {
+          updateAllInputs(d);
+          return;
+        }
+      }
+      // 回退：如果有本地时间字段
+      if (rec.local) {
+        const d = parseInput('local', rec.local);
+        if (d) {
+          updateAllInputs(d);
+          return;
+        }
+      }
+      // 最后尝试时间戳
+      if (rec.timestamp) {
+        const d = parseInput('timestamp', rec.timestamp);
+        if (d) updateAllInputs(d);
+      }
+    }
+
+    function shortIso(iso) {
+      if (!iso) return '';
+      return iso.replace('T', ' ').replace('Z', '');
+    }
   </script>
 </body>
+
 </html>
