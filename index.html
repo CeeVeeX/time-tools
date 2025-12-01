@@ -200,6 +200,24 @@
           placeholder="例如: Mon, 03 May 2021 10:40:00 GMT"
         >
       </div>
+
+      <!-- 毫秒转时分秒 -->
+      <div class="bg-white rounded-xl shadow-card p-5 card-hover md:col-span-2">
+        <div class="relative mb-2">
+          <label for="msConvert" class="block text-sm font-medium text-gray-700 label-float">
+            <i class="fa fa-clock-o text-primary mr-1"></i>毫秒 → 时 / 分 / 秒
+          </label>
+        </div>
+        <input 
+          type="text" 
+          id="msConvert" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary 
+                shadow-input input-transition"
+          placeholder="输入毫秒数，例如：123456789"
+        >
+        <p id="msResult" class="text-secondary text-sm mt-2"></p>
+      </div>
     </div>
 
     <!-- 提示信息 -->
@@ -462,6 +480,32 @@
     window.addEventListener('load', () => {
       const now = new Date();
       updateAllInputs(now);
+    });
+    
+    // 毫秒转换输入框
+    const msInput = document.getElementById('msConvert');
+    const msResult = document.getElementById('msResult');
+
+    // 监听输入
+    msInput.addEventListener('input', () => {
+      const value = msInput.value.trim();
+      if (value === '' || isNaN(value)) {
+        msResult.textContent = '请输入有效的数字（毫秒）';
+        msResult.classList.add("text-red-500");
+        return;
+      }
+
+      msResult.classList.remove("text-red-500");
+
+      const ms = Number(value);
+
+      const hours = Math.floor(ms / (1000 * 60 * 60));
+      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+      const milliseconds = ms % 1000;
+
+      msResult.textContent =
+        `${hours} 小时 ${minutes} 分钟 ${seconds} 秒 ${milliseconds} 毫秒`;
     });
   </script>
 </body>
