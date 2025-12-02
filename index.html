@@ -402,6 +402,46 @@
     // 防止重复触发的标志
     let isUpdating = false;
 
+    // 校验各输入格式，仅当格式正确才允许同步
+    function validateInput(type, value) {
+      if (!value) return false;
+      switch (type) {
+        case 'timestamp': {
+          // 仅允许13位毫秒时间戳
+          return /^\d{13}$/.test(value);
+        }
+        case 'iso': {
+          // 严格 ISO8601 (简化) YYYY-MM-DDTHH:MM:SS(.ms)?Z 或 带偏移
+          return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})$/.test(value);
+        }
+        case 'local': {
+          // YYYY-MM-DD HH:MM:SS 允许使用 - 或 /
+          return /^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}:\d{2}$/.test(value);
+        }
+        case 'utc': {
+          // YYYY-MM-DD HH:MM:SS UTC (UTC 可大小写)
+          return /^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}:\d{2}\s+UTC$/i.test(value);
+        }
+        case 'custom': {
+          // YYYY年MM月DD日 HH时mm分ss秒
+          return /^\d{4}年\d{1,2}月\d{1,2}日\s+\d{1,2}时\d{1,2}分\d{1,2}秒$/.test(value);
+        }
+        case 'rfc': {
+          // 尝试浏览器能正确解析且包含星期、GMT等（简单判定）
+          // 例如: Tue, 12 Dec 2023 09:15:30 GMT
+          if (!/^[A-Za-z]{3},\s\d{1,2}\s[A-Za-z]{3}\s\d{4}\s\d{2}:\d{2}:\d{2}\sGMT$/.test(value)) return false;
+          const d = new Date(value);
+          return !isNaN(d.getTime());
+        }
+        case 'datetimePicker': {
+          // 原生控件: YYYY-MM-DDTHH:MM
+          return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value);
+        }
+        default:
+          return false;
+      }
+    }
+
     // 为所有输入框添加输入事件监听
     Object.keys(inputs).forEach(type => {
       inputs[type].addEventListener('input', (e) => {
@@ -411,15 +451,16 @@
           clearAllInputs();
           return;
         }
-
-        // 尝试解析输入值
+        // 格式验证不通过：直接标红不解析、不同步
+        if (!validateInput(type, value)) {
+          if (type !== 'datetimePicker') setInputInvalid(inputs[type]);
+          return;
+        }
         const date = parseInput(type, value);
         if (date) {
-          // 解析成功，更新所有输入框
           updateAllInputs(date);
           setInputValid(inputs[type]);
         } else if (type !== 'datetimePicker') {
-          // 时间选择器不会有无效输入，其他输入框解析失败时标记为无效
           setInputInvalid(inputs[type]);
         }
       });
@@ -434,12 +475,11 @@
             const date = new Date(value);
             return isNaN(date.getTime()) ? null : date;
 
-          case 'timestamp':
-            // 处理时间戳（支持秒和毫秒）
+          case 'timestamp': {
             const num = Number(value);
-            if (isNaN(num)) return null;
-            // 10位是秒，13位是毫秒
-            return num.toString().length === 10 ? new Date(num * 1000) : new Date(num);
+            if (isNaN(num) || value.length !== 13) return null;
+            return new Date(num);
+          }
 
           case 'iso':
             // 处理ISO格式
@@ -511,8 +551,7 @@
 
       // 时间戳（秒和毫秒）
       const timestampMs = date.getTime();
-      const timestampSec = Math.floor(timestampMs / 1000);
-      inputs.timestamp.value = timestampMs.toString().length === 13 ? timestampMs : timestampSec;
+      inputs.timestamp.value = timestampMs; // 始终输出13位毫秒
 
       // ISO格式
       inputs.iso.value = date.toISOString();
@@ -913,11 +952,6 @@
         const d = parseInput('timestamp', rec.timestamp);
         if (d) updateAllInputs(d);
       }
-    }
-
-    function shortIso(iso) {
-      if (!iso) return '';
-      return iso.replace('T', ' ').replace('Z', '');
     }
   </script>
 </body>
